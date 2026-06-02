@@ -8,6 +8,9 @@ android {
         version = release(36) {
             minorApiLevel = 1
         }
+        buildFeatures {
+            viewBinding = true
+        }
     }
 
     defaultConfig {
@@ -57,6 +60,7 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+    //implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    //implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 }
