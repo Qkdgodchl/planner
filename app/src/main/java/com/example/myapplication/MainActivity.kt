@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -38,24 +39,21 @@ class MainActivity : AppCompatActivity() {
 
     // 🖼️ 앨범 스크롤 뷰(RecyclerView) 설정
     private fun setupRecyclerView() {
-        // 코루틴을 사용한 백그라운드 데이터 로딩 (평가기준: Coroutine 20점)
         lifecycleScope.launch {
-            // DB에서 앨범 목록을 가져올 때까지 기다림
             val albums = fetchAlbumsFromDb()
             albumCount = albums.size
 
-            // 만들어둔 어댑터를 스크롤 뷰에 연결
             val albumAdapter = AlbumAdapter(
                 albums = albums,
                 onAddClick = {
-                    // 마지막 '+ 앨범 추가' 카드를 터치했을 때 실행할 코드
-                    Toast.makeText(this@MainActivity, "새로운 앨범 추가 화면으로 이동!", Toast.LENGTH_SHORT).show()
-                    // TODO: 앨범 추가 Fragment 또는 Activity로 이동하는 로직
+                    // 🚀 앨범 추가 버튼 클릭 시 이동
+                    val intent = Intent(this@MainActivity, AddAlbumActivity::class.java)
+                    startActivity(intent)
                 },
                 onAlbumClick = { albumName ->
-                    // 일반 여행 앨범 카드를 터치했을 때 실행할 코드
-                    Toast.makeText(this@MainActivity, "[${albumName}] 앨범으로 이동!", Toast.LENGTH_SHORT).show()
-                    // TODO: 상세 앨범 Fragment 또는 Activity로 이동하는 로직
+                    // 🚀 [수정] 일반 앨범 아이템을 눌러도 동일하게 앨범 추가 화면으로 이동하도록 변경
+                    val intent = Intent(this@MainActivity, AddAlbumActivity::class.java)
+                    startActivity(intent)
                 }
             )
 
