@@ -73,15 +73,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnAiRecommend.setOnClickListener {
-            Toast.makeText(this, "AI 여행 추천 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
+
+            val intent =
+                Intent(this, AIRecommendActivity::class.java)
+
+            startActivity(intent)
         }
 
         binding.btnManualPlan.setOnClickListener {
             Toast.makeText(this, "수동 일정 추가 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
+            //Intent(this, ManualPlannerActivity::class.java)
         }
 
         binding.btnLoadPlanner.setOnClickListener {
-            Toast.makeText(this, "보관된 플래너 목록을 엽니다.", Toast.LENGTH_SHORT).show()
+
+            val intent =
+                Intent(this, SavedPlannerActivity::class.java)
+
+            startActivity(intent)
         }
 
         binding.fabAddPhoto.setOnClickListener {

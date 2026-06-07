@@ -22,6 +22,12 @@
         </activity>
         <activity android:name=".AddAlbumActivity" android:exported="false" />
         <activity android:name=".AlbumDetailActivity" android:exported="false" />
+        <activity
+            android:name=".AIRecommendActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".SavedPlannerActivity"
+            android:exported="false"/>
     </application>
 
 </manifest>
