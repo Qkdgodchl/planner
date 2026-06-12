@@ -6,6 +6,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.data.Album
+import com.example.myapplication.data.DatabaseProvider
 import com.example.myapplication.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val albums = fetchAlbumsFromDb()
             // 실제 데이터가 있는 앨범 개수 계산
-            albumCount = albums.count { it.isNotEmpty() }
+            albumCount = albums.size
 
             val albumAdapter = AlbumAdapter(
                 albums = albums,
@@ -45,10 +47,19 @@ class MainActivity : AppCompatActivity() {
                     val intent = Intent(this@MainActivity, AddAlbumActivity::class.java)
                     startActivity(intent)
                 },
-                onAlbumClick = { albumName ->
-                    // 🚀 이름이 있는 앨범 클릭 시 상세(3분류) 화면으로 바로 이동
-                    val intent = Intent(this@MainActivity, AlbumDetailActivity::class.java)
-                    intent.putExtra("ALBUM_NAME", albumName)
+                onAlbumClick = { albumTitle ->
+
+                    val intent =
+                        Intent(
+                            this@MainActivity,
+                            AlbumDetailActivity::class.java
+                        )
+
+                    intent.putExtra(
+                        "ALBUM_NAME",
+                        albumTitle
+                    )
+
                     startActivity(intent)
                 }
             )
@@ -57,10 +68,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume()
+    {
+        super.onResume()
+        setupRecyclerView()
+    }
+
     // 🗄️ 테스트를 위해 빈 슬롯("")을 포함한 리스트를 반환합니다.
-    private suspend fun fetchAlbumsFromDb(): List<String> = withContext(Dispatchers.IO) {
-        // "" 은 빈 네모칸(생성 버튼 역할), 나머지는 실제 앨범
-        return@withContext listOf("부산 여행", "제주도 여행", "", "", "") 
+    private suspend fun fetchAlbumsFromDb():
+            List<Album> {
+
+        return DatabaseProvider
+            .getDatabase(this)
+            .albumDao()
+            .getAllAlbums()
     }
 
     private fun setupButtons() {

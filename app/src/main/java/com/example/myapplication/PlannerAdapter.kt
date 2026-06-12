@@ -7,7 +7,8 @@ import com.example.myapplication.data.Planner
 import com.example.myapplication.databinding.ItemPlannerBinding
 
 class PlannerAdapter(
-    private var planners: List<Planner>
+    private var planners: List<Planner>,
+    private val onItemClick: (Planner) -> Unit
 ) : RecyclerView.Adapter<PlannerAdapter.PlannerViewHolder>() {
 
     inner class PlannerViewHolder(
@@ -43,6 +44,10 @@ class PlannerAdapter(
 
         holder.binding.tvPlanPreview.text =
             planner.planContent.take(80)
+
+        holder.itemView.setOnClickListener {
+            onItemClick(planner)
+        }
     }
 
     override fun getItemCount(): Int =

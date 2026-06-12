@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -20,7 +21,33 @@ class SavedPlannerActivity : AppCompatActivity() {
         binding = ActivitySavedPlannerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        plannerAdapter = PlannerAdapter(emptyList())
+        plannerAdapter = PlannerAdapter(
+            emptyList()
+        ) { planner ->
+
+            val intent =
+                Intent(
+                    this,
+                    PlannerDetailActivity::class.java
+                )
+
+            intent.putExtra(
+                "destination",
+                planner.destination
+            )
+
+            intent.putExtra(
+                "duration",
+                planner.duration
+            )
+
+            intent.putExtra(
+                "content",
+                planner.planContent
+            )
+
+            startActivity(intent)
+        }
 
         binding.rvPlanner.apply {
             layoutManager = LinearLayoutManager(this@SavedPlannerActivity)

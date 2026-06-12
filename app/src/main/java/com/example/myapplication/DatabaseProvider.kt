@@ -16,7 +16,7 @@ object DatabaseProvider {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "travel_database"
-            ).build()
+            ).fallbackToDestructiveMigration().build()
 
             INSTANCE = instance
 
