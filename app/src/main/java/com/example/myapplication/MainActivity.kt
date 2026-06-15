@@ -86,11 +86,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         binding.btnViewMap.setOnClickListener {
-            if (albumCount == 0) {
-                Toast.makeText(this, "앨범을 먼저 생성해주세요!", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "전체 지도 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
-            }
+
+            val intent =
+                Intent(
+                    this,
+                    MapActivity::class.java
+                )
+
+            startActivity(intent)
         }
 
         binding.btnAiRecommend.setOnClickListener {

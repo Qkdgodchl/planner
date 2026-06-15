@@ -21,33 +21,34 @@ class SavedPlannerActivity : AppCompatActivity() {
         binding = ActivitySavedPlannerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        plannerAdapter = PlannerAdapter(
-            emptyList()
-        ) { planner ->
+        plannerAdapter =
+            PlannerAdapter(
+                emptyList()
+            ) { planner ->
 
-            val intent =
-                Intent(
-                    this,
-                    PlannerDetailActivity::class.java
+                val intent =
+                    Intent(
+                        this,
+                        PlannerDetailActivity::class.java
+                    )
+
+                intent.putExtra(
+                    "destination",
+                    planner.destination
                 )
 
-            intent.putExtra(
-                "destination",
-                planner.destination
-            )
+                intent.putExtra(
+                    "duration",
+                    planner.duration
+                )
 
-            intent.putExtra(
-                "duration",
-                planner.duration
-            )
+                intent.putExtra(
+                    "planContent",
+                    planner.planContent
+                )
 
-            intent.putExtra(
-                "content",
-                planner.planContent
-            )
-
-            startActivity(intent)
-        }
+                startActivity(intent)
+            }
 
         binding.rvPlanner.apply {
             layoutManager = LinearLayoutManager(this@SavedPlannerActivity)

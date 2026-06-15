@@ -30,6 +30,11 @@
             android:exported="false"/>
         <activity
             android:name=".PlannerDetailActivity"/>
+        <activity
+            android:name=".MapActivity"/>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
     </application>
 
 </manifest>

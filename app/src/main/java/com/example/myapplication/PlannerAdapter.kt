@@ -4,11 +4,13 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.data.Planner
+import com.example.myapplication.data.TravelPlan
 import com.example.myapplication.databinding.ItemPlannerBinding
+import com.google.gson.Gson
 
 class PlannerAdapter(
     private var planners: List<Planner>,
-    private val onItemClick: (Planner) -> Unit
+    private val onPlannerClick: (Planner) -> Unit
 ) : RecyclerView.Adapter<PlannerAdapter.PlannerViewHolder>() {
 
     inner class PlannerViewHolder(
@@ -42,11 +44,38 @@ class PlannerAdapter(
         holder.binding.tvDate.text =
             planner.duration
 
-        holder.binding.tvPlanPreview.text =
-            planner.planContent.take(80)
+        try {
+
+            val travelPlan =
+                Gson().fromJson(
+                    planner.planContent,
+                    TravelPlan::class.java
+                )
+
+            val firstDay =
+                travelPlan.days.firstOrNull()
+
+            val firstItem =
+                firstDay?.items?.firstOrNull()
+
+            holder.binding.tvPlanPreview.text =
+                if (firstItem != null) {
+
+                    "Day ${firstDay.day} · ${firstItem.title}"
+
+                } else {
+
+                    "일정 없음"
+                }
+
+        } catch (e: Exception) {
+
+            holder.binding.tvPlanPreview.text =
+                "저장된 여행 일정"
+        }
 
         holder.itemView.setOnClickListener {
-            onItemClick(planner)
+            onPlannerClick(planner)
         }
     }
 

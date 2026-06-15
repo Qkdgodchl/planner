@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -12,12 +13,17 @@ import kotlinx.coroutines.launch
 import com.example.myapplication.data.GeminiRequest
 import com.example.myapplication.data.Content
 import com.example.myapplication.data.Part
+import com.example.myapplication.data.TravelPlan
 import com.example.myapplication.network.GeminiApiService
+import com.google.gson.Gson
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.myapplication.data.PlanUiItem
+import com.example.myapplication.BuildConfig
 
 class AIRecommendActivity : AppCompatActivity() {
 
-    private val API_KEY = "0941f92cd5f67bfc18f4780b76026d65"
-    private val GEMINI_API_KEY = "AIzaSyBLeo6RxRr6bzEIDRj6MdW6FLDgTNdAoxU"
+    private var currentTravelPlan: TravelPlan? = null
+    private var currentJsonPlan: String = ""
     private lateinit var binding: ActivityAiRecommendBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,6 +33,8 @@ class AIRecommendActivity : AppCompatActivity() {
             ActivityAiRecommendBinding.inflate(layoutInflater)
 
         setContentView(binding.root)
+        binding.rvPlan.layoutManager =
+            LinearLayoutManager(this)
 
         setupRecommendButton()
         setupSaveButton()
@@ -64,8 +72,11 @@ class AIRecommendActivity : AppCompatActivity() {
 
             if (destination.isBlank()) {
 
-                binding.tvResult.text =
-                    "목적지를 입력해주세요."
+                Toast.makeText(
+                    this,
+                    "목적지를 입력해주세요.",
+                    Toast.LENGTH_SHORT
+                ).show()
 
                 return@setOnClickListener
             }
@@ -74,97 +85,131 @@ class AIRecommendActivity : AppCompatActivity() {
 
                 try {
 
-                    binding.tvResult.text =
-                        "날씨 정보를 불러오는 중..."
+                    binding.progressBar.visibility =
+                        View.VISIBLE
 
-                    val response =
+                    binding.btnRecommend.isEnabled =
+                        false
+
+                    val weatherResponse =
                         RetrofitClient.weatherApi.getWeather(
                             city = destination,
-                            apiKey = API_KEY
+                            apiKey = BuildConfig.API_KEY
                         )
 
-                    if (response.isSuccessful) {
+                    if (!weatherResponse.isSuccessful) {
 
-                        val weather =
-                            response.body()
+                        Toast.makeText(
+                            this@AIRecommendActivity,
+                            "날씨 정보를 찾을 수 없습니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                        val weatherText =
-                            convertWeather(
-                                weather?.weather
-                                    ?.getOrNull(0)
-                                    ?.description ?: ""
-                            )
+                        return@launch
+                    }
 
-                        val temperature =
-                            weather?.main?.temp ?: 0.0
+                    val weather =
+                        weatherResponse.body()
 
-                        val clothingAdvice =
-                            when {
+                    val weatherText =
+                        convertWeather(
+                            weather?.weather
+                                ?.getOrNull(0)
+                                ?.description ?: ""
+                        )
 
-                                temperature >= 28 ->
-                                    "반팔, 반바지"
+                    val temperature =
+                        weather?.main?.temp ?: 0.0
 
-                                temperature >= 20 ->
-                                    "반팔 + 얇은 겉옷"
+                    val clothingAdvice =
+                        when {
 
-                                temperature >= 10 ->
-                                    "긴팔 + 가디건"
+                            temperature >= 28 ->
+                                "반팔, 반바지"
 
-                                else ->
-                                    "외투 준비"
-                            }
+                            temperature >= 20 ->
+                                "반팔 + 얇은 겉옷"
 
-                        val weatherInfo =
-                            """
-                            날씨: $weatherText
-                            기온: ${temperature}°C
-                            추천 복장: $clothingAdvice
-                            """.trimIndent()
+                            temperature >= 10 ->
+                                "긴팔 + 가디건"
 
-                        binding.tvResult.text =
-                            "AI가 여행 일정을 생성 중입니다..."
+                            else ->
+                                "외투 준비"
+                        }
 
-                        val aiPlan =
-                            generateTravelPlan(
-                                destination,
-                                startDate,
-                                endDate,
-                                weatherInfo
-                            )
+                    val weatherInfo =
+                        """
+                    날씨: $weatherText
+                    기온: ${temperature}°C
+                    추천 복장: $clothingAdvice
+                    """.trimIndent()
 
-                        savePlannerAutomatically(
+                    val aiJson =
+                        generateTravelPlan(
                             destination,
                             startDate,
                             endDate,
-                            aiPlan
+                            weatherInfo
                         )
 
-                        binding.tvResult.text =
-                            aiPlan
-                    }
-                    else {
+                    currentJsonPlan =
+                        aiJson
 
-                        binding.tvResult.text =
-                            """
-                        도시 정보를 찾을 수 없습니다.
+                    val travelPlan =
+                        Gson().fromJson(
+                            aiJson,
+                            TravelPlan::class.java
+                        )
 
-                        Error Code:
-                        ${response.code()}
-                        """.trimIndent()
+                    currentTravelPlan =
+                        travelPlan
+
+                    val uiItems =
+                        mutableListOf<PlanUiItem>()
+
+                    travelPlan.days.forEach { dayPlan ->
+
+                        uiItems.add(
+                            PlanUiItem.DayHeader(
+                                dayPlan.day
+                            )
+                        )
+
+                        dayPlan.items.forEach { item ->
+
+                            uiItems.add(
+                                PlanUiItem.Schedule(
+                                    item
+                                )
+                            )
+                        }
                     }
+
+                    binding.rvPlan.adapter =
+                        PlanAdapter(uiItems)
+
+                    binding.rvPlan.visibility =
+                        View.VISIBLE
+
+                    binding.tvEmpty.visibility =
+                        View.GONE
+
                 }
                 catch (e: Exception) {
 
-                    e.printStackTrace()
+                    Toast.makeText(
+                        this@AIRecommendActivity,
+                        e.message,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                finally {
 
-                    binding.tvResult.text =
-                        """
-                        네트워크 오류
+                    binding.progressBar.visibility =
+                        View.GONE
 
-                        ${e.javaClass.simpleName}
-
-                        ${e.message}
-                        """.trimIndent()
+                    binding.btnRecommend.isEnabled =
+                        true
                 }
             }
         }
@@ -209,28 +254,57 @@ class AIRecommendActivity : AppCompatActivity() {
         val prompt =
             """
         여행 목적지: $destination
-        
+
         여행 기간:
         $startDate ~ $endDate
-        
-        현재 날씨 정보:
+
+        현재 날씨:
         $weatherInfo
-        
-        위 정보를 고려하여
-        실제 여행 일정처럼 작성해줘.
-        
-        형식:
-        
-        Day 1
-        ...
-        
-        Day 2
-        ...
-        
-        Day 3
-        ...
-        
-        맛집과 관광지도 포함해줘.
+
+        당신은 전문 여행 플래너이다.
+
+        반드시 JSON만 반환하라.
+
+        JSON 외의 어떠한 텍스트도 출력하지 마라.
+
+        설명문 금지.
+        서론 금지.
+        결론 금지.
+        마크다운 금지.
+        코드블록 금지.
+
+        다음 스키마를 정확히 따라라.
+
+        {
+          "destination": "여행지명",
+          "days": [
+            {
+              "day": 1,
+              "items": [
+                {
+                  "time": "오전",
+                  "title": "일정명",
+                  "category": "관광"
+                }
+              ]
+            }
+          ]
+        }
+
+        category는 반드시 아래 중 하나만 사용한다.
+
+        관광
+        음식
+        숙소
+        쇼핑
+        교통
+        기타
+
+        여행 기간에 맞춰 day 개수를 생성하라.
+
+        각 day마다 최소 4개의 일정을 생성하라.
+
+        이제 JSON만 출력하라.
         """.trimIndent()
 
         val request =
@@ -248,17 +322,18 @@ class AIRecommendActivity : AppCompatActivity() {
             RetrofitClient
                 .geminiApi
                 .generateContent(
-                    GEMINI_API_KEY,
+                    BuildConfig.GEMINI_API_KEY,
                     request
                 )
 
         if (!response.isSuccessful) {
 
             return """
-            Gemini API 호출 실패
-            
-            Error Code:
-            ${response.code()}
+        Gemini API 호출 실패
+
+        code = ${response.code()}
+
+        ${response.errorBody()?.string()}
         """.trimIndent()
         }
 
@@ -269,7 +344,6 @@ class AIRecommendActivity : AppCompatActivity() {
             body == null ||
             body.candidates.isEmpty()
         ) {
-
             return "AI 응답이 비어 있습니다."
         }
 
@@ -282,7 +356,7 @@ class AIRecommendActivity : AppCompatActivity() {
 
     private fun savePlanner() {
 
-        if (binding.tvResult.text.isBlank()) {
+        if (currentTravelPlan == null) {
 
             Toast.makeText(
                 this,
@@ -295,24 +369,38 @@ class AIRecommendActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
 
-            val destination = binding.etDestination.text.toString()
-            val startDate = binding.etStartDate.text.toString()
-            val endDate = binding.etEndDate.text.toString()
+            val destination =
+                binding.etDestination.text.toString()
 
-            val planner = Planner(
-                id = 0, // Room이 자동 생성
-                destination = destination,
-                startDate = startDate,
-                endDate = endDate,
-                duration = "$startDate ~ $endDate",
-                planContent = binding.tvResult.text.toString(),
-                createdAt = System.currentTimeMillis()
-            )
+            val startDate =
+                binding.etStartDate.text.toString()
+
+            val endDate =
+                binding.etEndDate.text.toString()
+
+            val planner =
+                Planner(
+                    id = 0,
+                    destination = destination,
+                    startDate = startDate,
+                    endDate = endDate,
+                    duration = "$startDate ~ $endDate",
+
+                    planContent =
+                        currentJsonPlan,
+
+                    createdAt =
+                        System.currentTimeMillis()
+                )
 
             DatabaseProvider
-                .getDatabase(this@AIRecommendActivity)
+                .getDatabase(
+                    this@AIRecommendActivity
+                )
                 .plannerDao()
-                .insertPlanner(planner)
+                .insertPlanner(
+                    planner
+                )
 
             Toast.makeText(
                 this@AIRecommendActivity,
