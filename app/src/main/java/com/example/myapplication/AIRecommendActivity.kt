@@ -19,6 +19,8 @@ import com.google.gson.Gson
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.myapplication.data.PlanUiItem
 import com.example.myapplication.BuildConfig
+import android.app.DatePickerDialog
+import java.util.Calendar
 
 class AIRecommendActivity : AppCompatActivity() {
 
@@ -33,11 +35,20 @@ class AIRecommendActivity : AppCompatActivity() {
             ActivityAiRecommendBinding.inflate(layoutInflater)
 
         setContentView(binding.root)
-        binding.rvPlan.layoutManager =
-            LinearLayoutManager(this)
+        binding.rvPlan.apply {
+
+            layoutManager =
+                LinearLayoutManager(this@AIRecommendActivity)
+
+            itemAnimator =
+                androidx.recyclerview.widget.DefaultItemAnimator()
+        }
 
         setupRecommendButton()
         setupSaveButton()
+        setupDatePicker()
+
+        binding.btnSavePlanner.isEnabled = false
     }
 
     private fun convertWeather(desc: String): String {
@@ -80,6 +91,14 @@ class AIRecommendActivity : AppCompatActivity() {
 
                 return@setOnClickListener
             }
+
+            binding.btnRecommend.isEnabled = false
+
+            binding.progressBar.visibility =
+                View.VISIBLE
+
+            binding.tvEmpty.text =
+                "AI가 여행 일정을 생성하고 있습니다..."
 
             lifecycleScope.launch {
 
@@ -194,14 +213,18 @@ class AIRecommendActivity : AppCompatActivity() {
                     binding.tvEmpty.visibility =
                         View.GONE
 
+                    binding.btnSavePlanner.isEnabled = true
+
                 }
                 catch (e: Exception) {
 
-                    Toast.makeText(
-                        this@AIRecommendActivity,
-                        e.message,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    binding.progressBar.visibility =
+                        View.GONE
+
+                    binding.btnRecommend.isEnabled = true
+
+                    binding.tvEmpty.text =
+                        "일정을 생성하지 못했습니다.\n다시 시도해주세요."
                 }
                 finally {
 
@@ -242,6 +265,49 @@ class AIRecommendActivity : AppCompatActivity() {
         binding.btnSavePlanner.setOnClickListener {
             savePlanner()
         }
+    }
+
+    private fun setupDatePicker() {
+
+        binding.etStartDate.setOnClickListener {
+
+            showDatePicker(binding.etStartDate)
+        }
+
+        binding.etEndDate.setOnClickListener {
+
+            showDatePicker(binding.etEndDate)
+        }
+
+        binding.etStartDate.keyListener = null
+        binding.etEndDate.keyListener = null
+    }
+
+    private fun showDatePicker(editText: android.widget.EditText) {
+
+        val calendar = Calendar.getInstance()
+
+        DatePickerDialog(
+
+            this,
+
+            { _, year, month, day ->
+
+                editText.setText(
+                    String.format(
+                        "%04d-%02d-%02d",
+                        year,
+                        month + 1,
+                        day
+                    )
+                )
+            },
+
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+
+        ).show()
     }
 
     private suspend fun generateTravelPlan(

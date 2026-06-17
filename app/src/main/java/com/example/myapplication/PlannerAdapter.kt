@@ -10,7 +10,8 @@ import com.google.gson.Gson
 
 class PlannerAdapter(
     private var planners: List<Planner>,
-    private val onPlannerClick: (Planner) -> Unit
+    private val onPlannerClick: (Planner) -> Unit,
+    private val onPlannerLongClick: (Planner) -> Unit
 ) : RecyclerView.Adapter<PlannerAdapter.PlannerViewHolder>() {
 
     inner class PlannerViewHolder(
@@ -76,6 +77,13 @@ class PlannerAdapter(
 
         holder.itemView.setOnClickListener {
             onPlannerClick(planner)
+        }
+
+        holder.itemView.setOnLongClickListener {
+
+            onPlannerLongClick(planner)
+
+            true
         }
     }
 

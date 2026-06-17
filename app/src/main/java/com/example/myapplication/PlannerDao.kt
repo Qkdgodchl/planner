@@ -3,6 +3,7 @@ package com.example.myapplication.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface PlannerDao {
@@ -15,4 +16,10 @@ interface PlannerDao {
 
     @Query("DELETE FROM planner WHERE id = :plannerId")
     suspend fun deletePlanner(plannerId: Int)
+
+    @Query("SELECT * FROM planner WHERE id = :id")
+    suspend fun getPlannerById(id: Int): Planner?
+
+    @Update
+    suspend fun updatePlanner(planner: Planner)
 }

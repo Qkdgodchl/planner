@@ -105,8 +105,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnManualPlan.setOnClickListener {
-            Toast.makeText(this, "수동 일정 추가 화면으로 이동합니다.", Toast.LENGTH_SHORT).show()
-            //Intent(this, ManualPlannerActivity::class.java)
+
+            val intent = Intent(this, ManualPlannerActivity::class.java)
+
+            startActivity(intent)
         }
 
         binding.btnLoadPlanner.setOnClickListener {

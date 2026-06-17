@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.myapplication.data.DatabaseProvider
+import com.example.myapplication.data.Planner
 import com.example.myapplication.databinding.ActivitySavedPlannerBinding
 import kotlinx.coroutines.launch
 
@@ -23,32 +24,30 @@ class SavedPlannerActivity : AppCompatActivity() {
 
         plannerAdapter =
             PlannerAdapter(
-                emptyList()
-            ) { planner ->
 
-                val intent =
-                    Intent(
-                        this,
-                        PlannerDetailActivity::class.java
+                planners = emptyList(),
+
+                onPlannerClick = { planner ->
+
+                    val intent =
+                        Intent(
+                            this,
+                            PlannerDetailActivity::class.java
+                        )
+
+                    intent.putExtra(
+                        "plannerId",
+                        planner.id
                     )
 
-                intent.putExtra(
-                    "destination",
-                    planner.destination
-                )
+                    startActivity(intent)
+                },
 
-                intent.putExtra(
-                    "duration",
-                    planner.duration
-                )
+                onPlannerLongClick = { planner ->
 
-                intent.putExtra(
-                    "planContent",
-                    planner.planContent
-                )
-
-                startActivity(intent)
-            }
+                    showDeleteDialog(planner)
+                }
+            )
 
         binding.rvPlanner.apply {
             layoutManager = LinearLayoutManager(this@SavedPlannerActivity)
@@ -70,5 +69,35 @@ class SavedPlannerActivity : AppCompatActivity() {
 
             plannerAdapter.updateData(planners)
         }
+    }
+
+    private fun showDeleteDialog(
+        planner: Planner
+    ) {
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+
+            .setTitle("플래너 삭제")
+
+            .setMessage(
+                "'${planner.destination}' 여행 일정을 삭제하시겠습니까?"
+            )
+
+            .setPositiveButton("삭제") { _, _ ->
+
+                lifecycleScope.launch {
+
+                    DatabaseProvider
+                        .getDatabase(this@SavedPlannerActivity)
+                        .plannerDao()
+                        .deletePlanner(planner.id)
+
+                    loadPlanners()
+                }
+            }
+
+            .setNegativeButton("취소", null)
+
+            .show()
     }
 }

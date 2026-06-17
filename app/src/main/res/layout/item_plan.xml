@@ -29,12 +29,14 @@
             android:text="경복궁 방문"
             android:textSize="16sp"/>
 
-        <TextView
-            android:id="@+id/tvCategory"
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipCategory"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="관광"/>
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            app:chipCornerRadius="12dp"
+            app:chipMinHeight="32dp"/>
 
     </LinearLayout>
 
