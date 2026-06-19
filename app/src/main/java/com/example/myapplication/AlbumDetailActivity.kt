@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -20,9 +21,18 @@ class AlbumDetailActivity : AppCompatActivity() {
     private var albumId: Int = -1
     private lateinit var classifier: TravelClassifier
 
-    private val galleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    // 썸네일 문제를 해결하기 위해 OpenDocument를 사용하고 권한을 유지합니다.
+    private val galleryLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
-            savePhotoToAlbum(it)
+            try {
+                // URI 권한을 영구적으로 유지하도록 설정 (앱 재시작 후에도 썸네일이 보이게 함)
+                contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                savePhotoToAlbum(it)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // 일부 기기나 상황에서 권한 확보 실패 시에도 일단 시도
+                savePhotoToAlbum(it)
+            }
         }
     }
 
@@ -40,9 +50,7 @@ class AlbumDetailActivity : AppCompatActivity() {
             return
         }
 
-        // 분류기 초기화
         classifier = TravelClassifier(this)
-
         binding.collapsingToolbar.title = albumName
         
         setSupportActionBar(binding.toolbar)
@@ -50,7 +58,8 @@ class AlbumDetailActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         binding.fabAddPhoto.setOnClickListener {
-            galleryLauncher.launch("image/*")
+            // OpenDocument용 타입 지정
+            galleryLauncher.launch(arrayOf("image/*"))
         }
 
         loadPhotos()
@@ -61,7 +70,6 @@ class AlbumDetailActivity : AppCompatActivity() {
             val photoDao = DatabaseProvider.getDatabase(this@AlbumDetailActivity).photoDao()
             val allPhotos = photoDao.getPhotosByAlbumId(albumId)
 
-            // 관광지
             val touristPhotos = allPhotos.filter { it.category == "관광지" }
             binding.rvTouristAttractions.apply {
                 layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
@@ -69,7 +77,6 @@ class AlbumDetailActivity : AppCompatActivity() {
             }
             binding.tvTouristCount.text = touristPhotos.size.toString()
 
-            // 음식
             val foodPhotos = allPhotos.filter { it.category == "음식" }
             binding.rvFood.apply {
                 layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
@@ -77,7 +84,6 @@ class AlbumDetailActivity : AppCompatActivity() {
             }
             binding.tvFoodCount.text = foodPhotos.size.toString()
 
-            // 자연경관
             val landscapePhotos = allPhotos.filter { it.category == "자연경관" }
             binding.rvLandscape.apply {
                 layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
@@ -89,18 +95,24 @@ class AlbumDetailActivity : AppCompatActivity() {
 
     private fun savePhotoToAlbum(uri: Uri) {
         lifecycleScope.launch {
-            // ML 모델을 사용하여 이미지 분류 수행
             val category = withContext(Dispatchers.Default) {
                 classifier.classify(uri)
             }
 
+            val db = DatabaseProvider.getDatabase(this@AlbumDetailActivity)
             val photo = Photo(
                 albumId = albumId,
                 uri = uri.toString(),
                 category = category
             )
+            db.photoDao().insertPhoto(photo)
 
-            DatabaseProvider.getDatabase(this@AlbumDetailActivity).photoDao().insertPhoto(photo)
+            val albumDao = db.albumDao()
+            val album = albumDao.getAlbumById(albumId)
+            if (album != null && album.coverImagePath.isEmpty()) {
+                val updatedAlbum = album.copy(coverImagePath = uri.toString())
+                albumDao.updateAlbum(updatedAlbum)
+            }
             
             Toast.makeText(this@AlbumDetailActivity, "사진이 '${category}'(으)로 분류되어 저장되었습니다.", Toast.LENGTH_SHORT).show()
             loadPhotos()
