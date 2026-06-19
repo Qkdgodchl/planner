@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                     val intent = Intent(this@MainActivity, AddAlbumActivity::class.java)
                     startActivity(intent)
                 },
-                onAlbumClick = { albumTitle ->
+                onAlbumClick = { albumId, albumTitle ->
 
                     val intent =
                         Intent(
@@ -55,10 +55,8 @@ class MainActivity : AppCompatActivity() {
                             AlbumDetailActivity::class.java
                         )
 
-                    intent.putExtra(
-                        "ALBUM_NAME",
-                        albumTitle
-                    )
+                    intent.putExtra("ALBUM_ID", albumId)
+                    intent.putExtra("ALBUM_NAME", albumTitle)
 
                     startActivity(intent)
                 }
@@ -98,8 +96,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnAiRecommend.setOnClickListener {
 
-            val intent =
-                Intent(this, AIRecommendActivity::class.java)
+            val intent = Intent(this, AIRecommendActivity::class.java)
 
             startActivity(intent)
         }

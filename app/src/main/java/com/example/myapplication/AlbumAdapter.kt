@@ -10,7 +10,7 @@ import com.example.myapplication.databinding.ItemAlbumBinding
 class AlbumAdapter(
     private val albums: List<Album>,
     private val onAddClick: () -> Unit,
-    private val onAlbumClick: (String) -> Unit
+    private val onAlbumClick: (Int, String) -> Unit
 ) : RecyclerView.Adapter<AlbumAdapter.AlbumViewHolder>() {
 
     override fun getItemCount(): Int = albums.size + 1
@@ -45,7 +45,7 @@ class AlbumAdapter(
                 album.title
 
             holder.itemView.setOnClickListener {
-                onAlbumClick(album.title)
+                onAlbumClick(album.id, album.title)
             }
         }
     }

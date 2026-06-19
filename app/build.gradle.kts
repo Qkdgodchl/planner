@@ -27,19 +27,22 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: "AIzaSyCMxB5bkSEoN5NR9k4ZgnIJK7CQVPU6Qgo"
+        val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: "AIzaSyCMxB5bkSEoN5NR9k4ZgnIJK7CQVPU6Qgo"
+
         buildConfigField(
             "String",
             "API_KEY",
-            "\"${localProperties.getProperty("API_KEY") ?: ""}\""
+            "\"$mapsApiKey\""
         )
 
         buildConfigField(
             "String",
             "GEMINI_API_KEY",
-            "\"${localProperties.getProperty("GEMINI_API_KEY") ?: ""}\""
+            "\"$geminiApiKey\""
         )
         
-        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildFeatures {
@@ -59,6 +62,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    // TensorFlow Lite 모델이 압축되지 않도록 설정
+    aaptOptions {
+        noCompress("tflite")
     }
 }
 
@@ -94,4 +102,8 @@ dependencies {
     
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // TensorFlow Lite dependencies
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
 }

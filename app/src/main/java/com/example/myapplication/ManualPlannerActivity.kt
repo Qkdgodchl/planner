@@ -100,7 +100,9 @@ class ManualPlannerActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadPlanner()
+        if (editMode) {
+            loadPlanner()
+        }
     }
 
     private fun loadPlanner() {
