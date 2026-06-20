@@ -27,8 +27,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: "AIzaSyCMxB5bkSEoN5NR9k4ZgnIJK7CQVPU6Qgo"
-        val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: "AIzaSyCMxB5bkSEoN5NR9k4ZgnIJK7CQVPU6Qgo"
+        val mapsApiKey = localProperties.getProperty("MAPS_API_KEY")?.trim('"', '\'') ?: "AIzaSyCMxB5bkSEoN5NR9k4ZgnIJK7CQVPU6Qgo"
+        val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY")?.trim('"', '\'') ?: "AIzaSyCMxB5bkSEoN5NR9k4ZgnIJK7CQVPU6Qgo"
 
         buildConfigField(
             "String",

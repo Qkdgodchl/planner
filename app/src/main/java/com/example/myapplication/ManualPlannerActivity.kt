@@ -45,21 +45,22 @@ class ManualPlannerActivity : AppCompatActivity() {
 
         setContentView(binding.root)
 
+        // 버그 수정: 클릭 시점의 고정된 position 대신 데이터 객체 자체를 전달받아 
+        // 실시간으로 현재 index를 찾아 처리하도록 수정했습니다.
         adapter = PlanAdapter(
-
             items,
             true,
-
-            onAddSchedule = { headerPosition ->
-                showScheduleDialog(headerPosition)
+            onAddSchedule = { header ->
+                val index = items.indexOf(header)
+                if (index != -1) showScheduleDialog(index)
             },
-
-            onScheduleClick = { position ->
-                editSchedule(position)
+            onScheduleClick = { scheduleItem ->
+                val index = items.indexOf(scheduleItem)
+                if (index != -1) editSchedule(index)
             },
-
-            onScheduleLongClick = { position ->
-                deleteSchedule(position)
+            onScheduleLongClick = { scheduleItem ->
+                val index = items.indexOf(scheduleItem)
+                if (index != -1) deleteSchedule(index)
             }
         )
 
@@ -608,6 +609,16 @@ class ManualPlannerActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
 
+            return false
+        }
+
+        // 시작일이 종료일보다 늦은 경우 체크 로직 추가
+        if (startDate > endDate) {
+            Toast.makeText(
+                this,
+                "시작일은 종료일보다 빨라야 합니다.",
+                Toast.LENGTH_SHORT
+            ).show()
             return false
         }
 

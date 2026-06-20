@@ -3,6 +3,10 @@ package com.example.myapplication
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -56,11 +60,76 @@ class AlbumDetailActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
+        // 제목 영역을 클릭하면 제목 수정 다이얼로그를 띄웁니다.
+        binding.collapsingToolbar.setOnClickListener {
+            showEditTitleDialog()
+        }
+
         binding.fabAddPhoto.setOnClickListener {
             galleryLauncher.launch(arrayOf("image/*"))
         }
 
         loadPhotos()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_album_detail, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_edit_title -> {
+                showEditTitleDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showEditTitleDialog() {
+        val editText = EditText(this)
+        editText.setText(binding.collapsingToolbar.title)
+        editText.setSelection(editText.text?.length ?: 0)
+
+        // 다이얼로그 입력창에 여백(Padding) 추가를 위한 컨테이너 설정
+        val container = FrameLayout(this)
+        val params = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        )
+        val margin = (20 * resources.displayMetrics.density).toInt()
+        params.setMargins(margin, margin / 2, margin, 0)
+        editText.layoutParams = params
+        container.addView(editText)
+
+        AlertDialog.Builder(this)
+            .setTitle("앨범 제목 수정")
+            .setView(container)
+            .setPositiveButton("수정") { _, _ ->
+                val newTitle = editText.text.toString().trim()
+                if (newTitle.isNotEmpty()) {
+                    updateAlbumTitle(newTitle)
+                } else {
+                    Toast.makeText(this, "제목을 입력해주세요.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
+    private fun updateAlbumTitle(newTitle: String) {
+        lifecycleScope.launch {
+            val db = DatabaseProvider.getDatabase(this@AlbumDetailActivity)
+            val albumDao = db.albumDao()
+            val album = albumDao.getAlbumById(albumId) ?: return@launch
+            
+            val updatedAlbum = album.copy(title = newTitle)
+            albumDao.updateAlbum(updatedAlbum)
+            
+            binding.collapsingToolbar.title = newTitle
+            Toast.makeText(this@AlbumDetailActivity, "제목이 수정되었습니다.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun loadPhotos() {
@@ -69,7 +138,10 @@ class AlbumDetailActivity : AppCompatActivity() {
             val album = db.albumDao().getAlbumById(albumId)
             val allPhotos = db.photoDao().getPhotosByAlbumId(albumId)
 
-            album?.let { bindAlbumHeader(it) }
+            album?.let { 
+                bindAlbumHeader(it)
+                binding.collapsingToolbar.title = it.title
+            }
             bindPhotoSection(allPhotos.filter { it.category == CATEGORY_LANDMARK }, binding.rvTouristAttractions)
             bindPhotoSection(allPhotos.filter { it.category == CATEGORY_FOOD }, binding.rvFood)
             bindPhotoSection(allPhotos.filter { it.category == CATEGORY_NATURE }, binding.rvLandscape)

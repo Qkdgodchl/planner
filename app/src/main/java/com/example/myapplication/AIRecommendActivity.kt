@@ -47,12 +47,23 @@ class AIRecommendActivity : AppCompatActivity() {
 
     private fun setupRecommendButton() {
         binding.btnRecommend.setOnClickListener {
-            val destination = binding.etDestination.text.toString()
-            val startDate = binding.etStartDate.text.toString()
-            val endDate = binding.etEndDate.text.toString()
+            val destination = binding.etDestination.text.toString().trim()
+            val startDate = binding.etStartDate.text.toString().trim()
+            val endDate = binding.etEndDate.text.toString().trim()
 
             if (destination.isBlank()) {
                 Toast.makeText(this, "목적지를 입력해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (startDate.isBlank() || endDate.isBlank()) {
+                Toast.makeText(this, "여행 날짜를 선택해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // 시작일과 종료일 비교 로직 추가
+            if (startDate > endDate) {
+                Toast.makeText(this, "시작일은 종료일보다 빨라야 합니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -279,9 +290,9 @@ class AIRecommendActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            val destination = binding.etDestination.text.toString()
-            val startDate = binding.etStartDate.text.toString()
-            val endDate = binding.etEndDate.text.toString()
+            val destination = binding.etDestination.text.toString().trim()
+            val startDate = binding.etStartDate.text.toString().trim()
+            val endDate = binding.etEndDate.text.toString().trim()
 
             val planner = Planner(
                 id = 0,
