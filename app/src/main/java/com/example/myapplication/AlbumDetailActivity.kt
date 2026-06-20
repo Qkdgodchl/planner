@@ -5,9 +5,12 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import com.bumptech.glide.Glide
+import com.example.myapplication.data.Album
 import com.example.myapplication.data.DatabaseProvider
 import com.example.myapplication.data.Photo
 import com.example.myapplication.databinding.ActivityAlbumDetailBinding
@@ -21,16 +24,12 @@ class AlbumDetailActivity : AppCompatActivity() {
     private var albumId: Int = -1
     private lateinit var classifier: TravelClassifier
 
-    // 썸네일 문제를 해결하기 위해 OpenDocument를 사용하고 권한을 유지합니다.
     private val galleryLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             try {
-                // URI 권한을 영구적으로 유지하도록 설정 (앱 재시작 후에도 썸네일이 보이게 함)
                 contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 savePhotoToAlbum(it)
             } catch (e: Exception) {
-                e.printStackTrace()
-                // 일부 기기나 상황에서 권한 확보 실패 시에도 일단 시도
                 savePhotoToAlbum(it)
             }
         }
@@ -43,7 +42,7 @@ class AlbumDetailActivity : AppCompatActivity() {
 
         albumId = intent.getIntExtra("ALBUM_ID", -1)
         val albumName = intent.getStringExtra("ALBUM_NAME") ?: "나의 여행"
-        
+
         if (albumId == -1) {
             Toast.makeText(this, "잘못된 접근입니다.", Toast.LENGTH_SHORT).show()
             finish()
@@ -52,13 +51,12 @@ class AlbumDetailActivity : AppCompatActivity() {
 
         classifier = TravelClassifier(this)
         binding.collapsingToolbar.title = albumName
-        
+
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         binding.fabAddPhoto.setOnClickListener {
-            // OpenDocument용 타입 지정
             galleryLauncher.launch(arrayOf("image/*"))
         }
 
@@ -67,29 +65,82 @@ class AlbumDetailActivity : AppCompatActivity() {
 
     private fun loadPhotos() {
         lifecycleScope.launch {
-            val photoDao = DatabaseProvider.getDatabase(this@AlbumDetailActivity).photoDao()
-            val allPhotos = photoDao.getPhotosByAlbumId(albumId)
+            val db = DatabaseProvider.getDatabase(this@AlbumDetailActivity)
+            val album = db.albumDao().getAlbumById(albumId)
+            val allPhotos = db.photoDao().getPhotosByAlbumId(albumId)
 
-            val touristPhotos = allPhotos.filter { it.category == "관광지" }
-            binding.rvTouristAttractions.apply {
-                layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
-                adapter = PhotoAdapter(touristPhotos)
-            }
-            binding.tvTouristCount.text = touristPhotos.size.toString()
+            album?.let { bindAlbumHeader(it) }
+            bindPhotoSection(allPhotos.filter { it.category == CATEGORY_LANDMARK }, binding.rvTouristAttractions)
+            bindPhotoSection(allPhotos.filter { it.category == CATEGORY_FOOD }, binding.rvFood)
+            bindPhotoSection(allPhotos.filter { it.category == CATEGORY_NATURE }, binding.rvLandscape)
 
-            val foodPhotos = allPhotos.filter { it.category == "음식" }
-            binding.rvFood.apply {
-                layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
-                adapter = PhotoAdapter(foodPhotos)
-            }
-            binding.tvFoodCount.text = foodPhotos.size.toString()
+            binding.tvTouristCount.text = allPhotos.count { it.category == CATEGORY_LANDMARK }.toString()
+            binding.tvFoodCount.text = allPhotos.count { it.category == CATEGORY_FOOD }.toString()
+            binding.tvLandscapeCount.text = allPhotos.count { it.category == CATEGORY_NATURE }.toString()
+        }
+    }
 
-            val landscapePhotos = allPhotos.filter { it.category == "자연경관" }
-            binding.rvLandscape.apply {
-                layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
-                adapter = PhotoAdapter(landscapePhotos)
+    private fun bindAlbumHeader(album: Album) {
+        if (album.coverImagePath.isNotEmpty()) {
+            Glide.with(binding.ivAlbumHeader.context)
+                .load(album.coverImagePath)
+                .centerCrop()
+                .placeholder(android.R.drawable.ic_menu_gallery)
+                .error(android.R.drawable.ic_menu_gallery)
+                .into(binding.ivAlbumHeader)
+        } else {
+            binding.ivAlbumHeader.setImageResource(android.R.drawable.ic_menu_gallery)
+        }
+    }
+
+    private fun bindPhotoSection(photos: List<Photo>, recyclerView: androidx.recyclerview.widget.RecyclerView) {
+        recyclerView.apply {
+            layoutManager = GridLayoutManager(this@AlbumDetailActivity, 3)
+            adapter = PhotoAdapter(
+                photos = photos,
+                onDeleteClick = { photo -> showDeletePhotoDialog(photo) },
+                onSetCoverClick = { photo -> setCoverPhoto(photo) }
+            )
+        }
+    }
+
+    private fun showDeletePhotoDialog(photo: Photo) {
+        AlertDialog.Builder(this)
+            .setTitle("사진 삭제")
+            .setMessage("이 사진을 앨범에서 삭제할까요?")
+            .setPositiveButton("삭제") { _, _ -> deletePhoto(photo) }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
+    private fun deletePhoto(photo: Photo) {
+        lifecycleScope.launch {
+            val db = DatabaseProvider.getDatabase(this@AlbumDetailActivity)
+            val albumDao = db.albumDao()
+            val photoDao = db.photoDao()
+            val album = albumDao.getAlbumById(albumId)
+
+            photoDao.deletePhoto(photo)
+
+            if (album?.coverImagePath == photo.uri) {
+                val nextCover = photoDao.getFirstPhotoByAlbumId(albumId)?.uri.orEmpty()
+                albumDao.updateAlbum(album.copy(coverImagePath = nextCover))
             }
-            binding.tvLandscapeCount.text = landscapePhotos.size.toString()
+
+            Toast.makeText(this@AlbumDetailActivity, "사진을 삭제했습니다.", Toast.LENGTH_SHORT).show()
+            loadPhotos()
+        }
+    }
+
+    private fun setCoverPhoto(photo: Photo) {
+        lifecycleScope.launch {
+            val albumDao = DatabaseProvider.getDatabase(this@AlbumDetailActivity).albumDao()
+            val album = albumDao.getAlbumById(albumId) ?: return@launch
+            val updatedAlbum = album.copy(coverImagePath = photo.uri)
+
+            albumDao.updateAlbum(updatedAlbum)
+            bindAlbumHeader(updatedAlbum)
+            Toast.makeText(this@AlbumDetailActivity, "대표 사진을 변경했습니다.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -110,10 +161,9 @@ class AlbumDetailActivity : AppCompatActivity() {
             val albumDao = db.albumDao()
             val album = albumDao.getAlbumById(albumId)
             if (album != null && album.coverImagePath.isEmpty()) {
-                val updatedAlbum = album.copy(coverImagePath = uri.toString())
-                albumDao.updateAlbum(updatedAlbum)
+                albumDao.updateAlbum(album.copy(coverImagePath = uri.toString()))
             }
-            
+
             Toast.makeText(this@AlbumDetailActivity, "사진이 '${category}'(으)로 분류되어 저장되었습니다.", Toast.LENGTH_SHORT).show()
             loadPhotos()
         }
@@ -124,5 +174,11 @@ class AlbumDetailActivity : AppCompatActivity() {
         if (::classifier.isInitialized) {
             classifier.close()
         }
+    }
+
+    companion object {
+        private const val CATEGORY_FOOD = "음식"
+        private const val CATEGORY_LANDMARK = "관광지"
+        private const val CATEGORY_NATURE = "자연경관"
     }
 }
