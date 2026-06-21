@@ -111,16 +111,30 @@ class AIRecommendActivity : AppCompatActivity() {
         binding.btnRecommend.isEnabled = !isLoading
     }
 
+    // AIRecommendActivity.kt 내의 함수 수정
     private suspend fun fetchWeatherInfoOrNull(destination: String): String? {
         return try {
-            val response = RetrofitClient.weatherApi.getWeather(
-                city = destination,
-                apiKey = BuildConfig.API_KEY
-            )
+            // 1. Geocoder를 사용하여 목적지를 좌표로 변환
+            val geocoder = android.location.Geocoder(this, java.util.Locale.getDefault())
+            val addresses = geocoder.getFromLocationName(destination, 1)
 
-            if (!response.isSuccessful) {
-                return null
+            val response = if (addresses != null && addresses.isNotEmpty()) {
+                val location = addresses[0]
+                // 2. 좌표가 있다면 좌표로 날씨 호출
+                RetrofitClient.weatherApi.getWeatherByCoords(
+                    lat = location.latitude,
+                    lon = location.longitude,
+                    apiKey = BuildConfig.API_KEY
+                )
+            } else {
+                // 좌표 변환 실패 시 기존처럼 텍스트로 시도
+                RetrofitClient.weatherApi.getWeather(
+                    city = destination,
+                    apiKey = BuildConfig.API_KEY
+                )
             }
+
+            if (!response.isSuccessful) return null
 
             val weather = response.body() ?: return null
             val description = weather.weather.getOrNull(0)?.description.orEmpty()
@@ -133,14 +147,15 @@ class AIRecommendActivity : AppCompatActivity() {
             }
 
             """
-            날씨: ${convertWeather(description)}
-            기온: ${temperature}°C
-            추천 복장: $clothingAdvice
-            """.trimIndent()
+        날씨: ${convertWeather(description)}
+        기온: ${temperature}°C
+        추천 복장: $clothingAdvice
+        """.trimIndent()
         } catch (e: Exception) {
             null
         }
     }
+
 
     private fun convertWeather(desc: String): String {
         return when (desc.lowercase()) {
