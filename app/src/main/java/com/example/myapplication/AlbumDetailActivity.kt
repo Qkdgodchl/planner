@@ -13,7 +13,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
-import com.bumptech.glide.Glide
 import com.example.myapplication.data.Album
 import com.example.myapplication.data.DatabaseProvider
 import com.example.myapplication.data.Photo
@@ -132,16 +131,20 @@ class AlbumDetailActivity : AppCompatActivity() {
         }
     }
 
+    // C:/Users/luke0/StudioProjects/planner/app/src/main/java/com/example/myapplication/AlbumDetailActivity.kt 내 관련 부분 수정
+
     private fun loadPhotos() {
         lifecycleScope.launch {
             val db = DatabaseProvider.getDatabase(this@AlbumDetailActivity)
             val album = db.albumDao().getAlbumById(albumId)
             val allPhotos = db.photoDao().getPhotosByAlbumId(albumId)
 
-            album?.let { 
-                bindAlbumHeader(it)
+            album?.let {
                 binding.collapsingToolbar.title = it.title
+                // ViewPager2에 전체 사진 바인딩 (대표 사진 정보 전달)
+                bindAlbumHeader(allPhotos, it.coverImagePath)
             }
+
             bindPhotoSection(allPhotos.filter { it.category == CATEGORY_LANDMARK }, binding.rvTouristAttractions)
             bindPhotoSection(allPhotos.filter { it.category == CATEGORY_FOOD }, binding.rvFood)
             bindPhotoSection(allPhotos.filter { it.category == CATEGORY_NATURE }, binding.rvLandscape)
@@ -152,16 +155,25 @@ class AlbumDetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun bindAlbumHeader(album: Album) {
-        if (album.coverImagePath.isNotEmpty()) {
-            Glide.with(binding.ivAlbumHeader.context)
-                .load(album.coverImagePath)
-                .centerCrop()
-                .placeholder(android.R.drawable.ic_menu_gallery)
-                .error(android.R.drawable.ic_menu_gallery)
-                .into(binding.ivAlbumHeader)
+    private fun bindAlbumHeader(photos: List<Photo>, coverImagePath: String?) {
+        // 사진들의 URI 리스트 생성
+        val imageUrls = photos.map { it.uri }.toMutableList()
+
+        // 대표 사진이 있다면 리스트의 맨 앞으로 이동시킴
+        if (!coverImagePath.isNullOrEmpty()) {
+            val coverIndex = imageUrls.indexOf(coverImagePath)
+            if (coverIndex != -1) {
+                val coverUrl = imageUrls.removeAt(coverIndex)
+                imageUrls.add(0, coverUrl)
+            }
+        }
+
+        if (imageUrls.isNotEmpty()) {
+            binding.vpAlbumHeader.adapter = HeaderImageAdapter(imageUrls)
+            // 첫 번째 아이템(대표 사진)으로 즉시 이동 (이미 0번이지만 명시적으로 처리)
+            binding.vpAlbumHeader.setCurrentItem(0, false)
         } else {
-            binding.ivAlbumHeader.setImageResource(android.R.drawable.ic_menu_gallery)
+            binding.vpAlbumHeader.adapter = HeaderImageAdapter(emptyList())
         }
     }
 
@@ -211,7 +223,8 @@ class AlbumDetailActivity : AppCompatActivity() {
             val updatedAlbum = album.copy(coverImagePath = photo.uri)
 
             albumDao.updateAlbum(updatedAlbum)
-            bindAlbumHeader(updatedAlbum)
+            // 대표 사진 변경 시에도 전체 사진 목록을 다시 불러와 ViewPager 갱신 (또는 정렬 변경)
+            loadPhotos()
             Toast.makeText(this@AlbumDetailActivity, "대표 사진을 변경했습니다.", Toast.LENGTH_SHORT).show()
         }
     }

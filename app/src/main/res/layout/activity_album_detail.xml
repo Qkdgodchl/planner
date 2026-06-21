@@ -24,12 +24,10 @@
             app:layout_scrollFlags="scroll|exitUntilCollapsed"
             app:titleCollapseMode="fade">
 
-            <ImageView
-                android:id="@+id/ivAlbumHeader"
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/vpAlbumHeader"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_gallery"
                 app:layout_collapseMode="parallax" />
 
             <View
